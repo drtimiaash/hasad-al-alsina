@@ -8,7 +8,9 @@ import Learn from './components/Learn';
 import Accounting from './components/Accounting';
 import Harvest from './components/Harvest';
 import Challenges from './components/Challenges';
+
 import Scripture from './components/Scripture';
+import InstallPrompt from './components/InstallPrompt';
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -70,6 +72,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+      <InstallPrompt />
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         {renderContent()}
       </div>
