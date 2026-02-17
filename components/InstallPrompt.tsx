@@ -13,20 +13,31 @@ const InstallPrompt: React.FC = () => {
     const [isIOS, setIsIOS] = useState(false);
 
     useEffect(() => {
-        // 1. Check if already installed
+        // 1. Check if already installed (Standalone mode)
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches
             || (window.navigator as any).standalone === true;
 
-        if (isStandalone) {
+        // 2. Check localStorage flags
+        const alreadyInstalled = localStorage.getItem('pwa_installed') === 'true';
+        const dismissedAt = localStorage.getItem('pwa_dismissed_at');
+        const now = Date.now();
+
+        // If standalone OR flagged as installed -> Hide
+        if (isStandalone || alreadyInstalled) {
             setIsInstalled(true);
             return;
         }
 
-        // 2. Detect iOS
+        // If dismissed less than 24 hours ago -> Hide
+        if (dismissedAt && (now - parseInt(dismissedAt)) < 24 * 60 * 60 * 1000) {
+            return;
+        }
+
+        // 3. Detect iOS
         const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
         setIsIOS(ios);
 
-        // 3. Listen for the install prompt (Android/Desktop Chrome)
+        // 4. Listen for the install prompt (Android/Desktop Chrome)
         const handler = (e: Event) => {
             console.log('✨ PWA Install Prompt fired!');
             e.preventDefault();
@@ -34,17 +45,17 @@ const InstallPrompt: React.FC = () => {
         };
         window.addEventListener('beforeinstallprompt', handler);
 
-        // 4. Force show banner after 2 seconds regardless of event
-        // This ensures users see it even on iOS or if event fired early
+        // 5. Force show banner after 2 seconds (if not hidden by checks above)
         const timer = setTimeout(() => {
             setShowBanner(true);
         }, 2000);
 
-        // 5. Detect when app is installed
+        // 6. Detect when app is installed
         window.addEventListener('appinstalled', () => {
             console.log('🎉 App installed successfully');
             setIsInstalled(true);
             setShowBanner(false);
+            localStorage.setItem('pwa_installed', 'true');
         });
 
         return () => {
@@ -62,26 +73,35 @@ const InstallPrompt: React.FC = () => {
             console.log(`User response to install prompt: ${outcome}`);
             if (outcome === 'accepted') {
                 setIsInstalled(true);
+                localStorage.setItem('pwa_installed', 'true');
             }
             setDeferredPrompt(null);
             setInstalling(false);
-            setShowBanner(false); // Close after choice
+            setShowBanner(false);
         } else {
-            // Fallback (iOS or no event): Show instructions
-            // For now, on this button click, we just toggle a "Help" state or show an alert
-            // But to keep it simple and beautiful, we'll just expand the UI to show instructions
-            // For this specific iteration, let's just alert or show a simple message if no prompt
+            // Fallback (iOS or no event)
             if (isIOS) {
                 alert("لتثبيت التطبيق على الآيفون:\n1. اضغط على زر المشاركة (Share) ⬆️\n2. اختر 'إضافة إلى الصفحة الرئيسية' (Add to Home Screen) ➕");
             } else {
-                alert("لتثبيت التطبيق:\nاضغط على قائمة المتصفح (⋮) واختر 'تثبيت التطبيق' أو 'Add to Home Screen'.");
+                const instructions = "لتثبيت التطبيق:\nاضغط على قائمة المتصفح (⋮) واختر 'تثبيت التطبيق' أو 'Add to Home Screen'.";
+
+                // Try to guide user or just show alert
+                alert(instructions);
             }
-            setShowBanner(false); // Dismiss after showing instructions
+            // For manual install attempt, we don't set 'pwa_installed' yet 
+            // because we can't confirm success reliably without the event.
+            // But we can hide the banner for this session.
+            setShowBanner(false);
+
+            // Optionally set dismissed to avoid spamming the user if they failed
+            // localStorage.setItem('pwa_dismissed_at', Date.now().toString());
         }
     };
 
     const handleDismiss = () => {
         setShowBanner(false);
+        // Set dismissal timestamp (24 hours cooldown)
+        localStorage.setItem('pwa_dismissed_at', Date.now().toString());
     };
 
     if (!showBanner || isInstalled) return null;
