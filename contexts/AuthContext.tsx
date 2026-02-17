@@ -65,8 +65,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const signIn = async (email: string, password: string) => {
+        // Try to sign in
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) return { error: error.message };
+
+        if (error) {
+            // Enhanced error message for email not confirmed
+            if (error.message.includes("Email not confirmed")) {
+                return { error: "يرجى تفعيل الحساب من البريد الإلكتروني (أو قم بإلغاء خيار تأكيد الإيميل من Supabase)" };
+            }
+            return { error: error.message };
+        }
         return { error: null };
     };
 

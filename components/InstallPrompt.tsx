@@ -12,37 +12,30 @@ const InstallPrompt: React.FC = () => {
     const [installing, setInstalling] = useState(false);
 
     useEffect(() => {
-        // Check if already installed or user dismissed
-        const dismissed = localStorage.getItem('pwa_install_dismissed');
-        const installed = localStorage.getItem('pwa_installed');
+        // Check if already installed
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches
             || (window.navigator as any).standalone === true;
 
-        if (installed || isStandalone) {
+        if (isStandalone) {
             setIsInstalled(true);
             return;
         }
 
-        // Don't show if dismissed in the last 3 days
-        if (dismissed) {
-            const dismissedAt = parseInt(dismissed);
-            if (Date.now() - dismissedAt < 3 * 24 * 60 * 60 * 1000) return;
-        }
-
         const handler = (e: Event) => {
+            console.log('✨ PWA Install Prompt fired!');
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
-            // Show banner after 2 seconds
-            setTimeout(() => setShowBanner(true), 2000);
+            // Show banner immediately for testing
+            setShowBanner(true);
         };
 
         window.addEventListener('beforeinstallprompt', handler);
 
         // Detect when app is installed
         window.addEventListener('appinstalled', () => {
+            console.log('🎉 App installed successfully');
             setIsInstalled(true);
             setShowBanner(false);
-            localStorage.setItem('pwa_installed', 'true');
         });
 
         return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -53,8 +46,8 @@ const InstallPrompt: React.FC = () => {
         setInstalling(true);
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response to install prompt: ${outcome}`);
         if (outcome === 'accepted') {
-            localStorage.setItem('pwa_installed', 'true');
             setIsInstalled(true);
         }
         setShowBanner(false);
@@ -64,13 +57,13 @@ const InstallPrompt: React.FC = () => {
 
     const handleDismiss = () => {
         setShowBanner(false);
-        localStorage.setItem('pwa_install_dismissed', Date.now().toString());
+        // Removed validation to allow it to reappear on refresh for testing
     };
 
     if (!showBanner || isInstalled) return null;
 
     return (
-        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" dir="rtl">
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300" dir="rtl">
             <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-emerald-100 animate-in slide-in-from-bottom-8 duration-500">
                 {/* Icon */}
                 <div className="flex justify-center mb-4">
@@ -85,22 +78,6 @@ const InstallPrompt: React.FC = () => {
                     <p className="text-slate-500 text-xs leading-relaxed">
                         أضف حصاد الألسنة لشاشتك الرئيسية عشان توصله بسرعة زي أي تطبيق عادي — بدون ما يحتاج مساحة كبيرة 📱
                     </p>
-                </div>
-
-                {/* Features */}
-                <div className="grid grid-cols-3 gap-2 mb-5">
-                    <div className="bg-emerald-50 rounded-xl p-2 text-center">
-                        <span className="text-lg block">⚡</span>
-                        <span className="text-[9px] font-bold text-emerald-700">فتح سريع</span>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-2 text-center">
-                        <span className="text-lg block">📴</span>
-                        <span className="text-[9px] font-bold text-emerald-700">بدون نت</span>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-2 text-center">
-                        <span className="text-lg block">🔔</span>
-                        <span className="text-[9px] font-bold text-emerald-700">تذكيرات</span>
-                    </div>
                 </div>
 
                 {/* Buttons */}
@@ -126,8 +103,6 @@ const InstallPrompt: React.FC = () => {
                         مش دلوقتي
                     </button>
                 </div>
-
-                <p className="text-center text-[9px] text-slate-300 mt-3">مش هيظهر تاني لمدة 3 أيام لو رفضت</p>
             </div>
         </div>
     );
